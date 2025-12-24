@@ -1,6 +1,5 @@
 
 using Backend.Backgrounds;
-using Backend.Backgrounds.Jobs;
 using Backend.Cloud;
 using Backend.Data;
 using Backend.Interfaces;
@@ -9,8 +8,6 @@ using Backend.RabbitMQ;
 using Backend.Repositories;
 using Backend.Services;
 using Backend.Smtp;
-using Hangfire;
-using Hangfire.MySql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +15,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -32,6 +28,10 @@ builder.Services.AddControllers()
         opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
 		
 	});
+
+builder.Services.Configure<BrevoOptions>(
+    builder.Configuration.GetSection("Brevo")
+);
 
 
 builder.Services.Configure<CloudinaryOptions>(
@@ -53,10 +53,13 @@ builder.Services.AddCors(options =>
 
 
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+Console.WriteLine($"Connection String: {connectionString}");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
+        connectionString,
+        ServerVersion.AutoDetect(connectionString)
     )
 );
 
@@ -115,7 +118,7 @@ builder.Services.AddSwaggerGen(c =>
     c.CustomSchemaIds(type => type.FullName); 
     c.SupportNonNullableReferenceTypes();
 
-    // Thêm cấu hình JWT Bearer
+ 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "Nhập JWT token như: Bearer {token}",
@@ -143,13 +146,12 @@ builder.Services.AddSwaggerGen(c =>
     
 });
 
+builder.Services.AddHttpClient<EmailService>();
+
+
 // RabbitMQ
 builder.Services.Configure<RabbitMqSetting>(builder.Configuration.GetSection("RabbitMQ"));
 builder.Services.AddSingleton<RabbitMqConnection>();
-// builder.Services.Configure<SmtpOptions>(
-//     builder.Configuration.GetSection("Smtp")
-// );
-builder.Services.Configure<SendGridOptions>(builder.Configuration.GetSection("SendGrid"));
 
 builder.Services.AddScoped(typeof(IRabbitMqPublisher), typeof(RabbitMqPublisher));
 builder.Services.AddHostedService<MailMessageConsumer>();
@@ -168,30 +170,10 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<RoomService>();
 builder.Services.AddScoped<EquipmentTypeService>();
 builder.Services.AddScoped<DashboardService>();
-builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<CloudinaryService>();
 builder.Services.AddScoped<UploadFileService>();
 builder.Services.AddHttpContextAccessor();
-// builder.Services.AddScoped<InventoryCloudSyncJob>();
 
-// builder.Services.AddHangfire(config =>
-// {
-//     config.UseStorage(
-//         new MySqlStorage(
-//             builder.Configuration.GetConnectionString("Hangfire"),
-//             new MySqlStorageOptions
-//             {
-//                 TablesPrefix = "hangfire_",
-//                 QueuePollInterval = TimeSpan.FromSeconds(15),
-//                 JobExpirationCheckInterval = TimeSpan.FromHours(1),
-//                 CountersAggregateInterval = TimeSpan.FromMinutes(5),
-//                 PrepareSchemaIfNecessary = true
-//             }
-//         )
-//     );
-// });
-//
-// builder.Services.AddHangfireServer();
 
 builder.Services.AddConnections();
 var app = builder.Build();
@@ -210,17 +192,12 @@ app.MapGet("/", context =>
     return Task.CompletedTask;
 });
 
-// app.UseHangfireDashboard("/hangfire");
+
 
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
-// RecurringJob.AddOrUpdate<InventoryCloudSyncJob>(
-//     "inventory-cloud-sync",
-//     job => job.RunAsync(),
-//     Cron.Minutely
-// );
 
 app.MapControllers();
 

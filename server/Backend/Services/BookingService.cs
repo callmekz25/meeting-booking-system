@@ -204,7 +204,7 @@ public class BookingService
 
             if (bookingDto.Status == BookingStatus.Approved)
             {
-
+            
                 await _publisher.SendMessage(
                     new EmailMessageDto
                     {
@@ -214,8 +214,8 @@ public class BookingService
                     RabbitMqExchanges.MailExChange,
                     RabbitRoutingKeys.BookingApprovedMail
                 );
-
-
+            
+            
                 await _publisher.SendMessage(
                     new EmailMessageDto
                     {
@@ -228,7 +228,7 @@ public class BookingService
             }
             else
             {
-
+            
                 await _publisher.SendMessage(
                     new EmailMessageDto
                     {

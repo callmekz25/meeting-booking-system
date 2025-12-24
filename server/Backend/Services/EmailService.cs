@@ -1,6 +1,8 @@
 ﻿using System.Net;
 using System.Net.Mail;
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Backend.Dtos;
 using Backend.Smtp;
@@ -13,14 +15,16 @@ namespace Backend.Services
     public class EmailService
     {
         private readonly IConfiguration _configuration;
-        private readonly SendGridOptions _options;
+        // private readonly SendGridOptions _options;
+        private readonly HttpClient _http;
+        private readonly BrevoOptions _options;
 
-
-        public EmailService(IConfiguration configuration, IOptions<SendGridOptions> options)
+        public EmailService(IConfiguration configuration, IOptions<BrevoOptions> options, HttpClient http)
         {
             _configuration = configuration;
             _options = options.Value;
-        
+            _http = http;
+
         }
 
         public async Task SendPasswordCreateUserEmail(EmailCreateUserDto dto)
@@ -269,41 +273,45 @@ namespace Backend.Services
 
         private async Task SendEmailAsync(string toEmail, string subject, string htmlContent)
         {
-            // var smtpHost = _configuration["Smtp:Host"];
-            // var smtpPort = _configuration.GetValue<int>("Smtp:Port");
-            // var smtpUser = _configuration["Smtp:Username"];
-            // var smtpPass = _configuration["Smtp:Password"];
-            // var fromEmail = _configuration["Smtp:FromEmail"];
-            // var fromName = _configuration["Smtp:FromName"];
-
-            // using var client = new SmtpClient(_options.Host, _options.Port)
-            // {
-            //     Credentials = new NetworkCredential(_options.Username, _options.Password),
-            //     EnableSsl = true
-            // };
-            //
-            // var mailMessage = new MailMessage
-            // {
-            //     From = new MailAddress(_options.FromEmail, _options.FromName),
-            //     Subject = subject,
-            //     Body = body,
-            //     IsBodyHtml = true
-            // };
-            // mailMessage.To.Add(toEmail);
-            //
-            // await client.SendMailAsync(mailMessage);
-            var client = new SendGridClient(_options.ApiKey);
-            var from = new EmailAddress(_options.SenderEmail, _options.SenderName);
-            var to = new EmailAddress(toEmail);
-            var msg = MailHelper.CreateSingleEmail(from, to, subject, plainTextContent: null, htmlContent: htmlContent);
-
-            var response = await client.SendEmailAsync(msg);
-
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                var body = await response.Body.ReadAsStringAsync();
-                throw new Exception($"SendGrid failed: {body}");
+                var request = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    "https://api.brevo.com/v3/smtp/email"
+                );
+                request.Headers.Add("api-key", _options.ApiKey);
+                var body = new
+                {
+                    sender = new
+                    {
+                        email = _options.SenderEmail,
+                        name = _options.SenderName
+                    },
+                    to = new[]
+                    {
+                        new { email = toEmail }
+                    },
+                    subject,
+                    htmlContent
+                };
+            
+            
+                request.Content = new StringContent(
+                    JsonSerializer.Serialize(body),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+                var response = await _http.SendAsync(request);
+
+                return;
+             
             }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                throw;
+            }
+          
         }
 
         public async Task SendApprovedEmail(BookingDto booking)
