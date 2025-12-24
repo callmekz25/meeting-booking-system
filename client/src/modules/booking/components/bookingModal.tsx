@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, Users, MessageSquare, Monitor } from 'lucide-react';
+import React from 'react';
+import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Select,
@@ -19,15 +17,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { bookingFormSchema, type BookingFormType } from '@/modules/booking/types/booking';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useGetMe, useGetUsersByEmail } from '@/modules/user/hooks/user.hook';
+import { useGetMe } from '@/modules/user/hooks/user.hook';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import type { User } from '@/modules/user/types/user';
 import ConfirmModal from './confirmModal';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDeleteBooking } from '../hooks/booking.hook';
-import { toast } from 'sonner';
 import { useGetRooms } from '@/modules/room/hooks/room.hook';
 import BookingDetailModal from './bookingDetailModal';
 import SearchSelectMulti from './searchSelectMulti';
@@ -86,34 +81,13 @@ export function BookingModal({
   const start = dateBook && startTime && `${dateBook}T${startTime}:00`;
   const end = dateBook && endTime && `${dateBook}T${endTime}:00`;
 
-  const [attendeeInput, setAttendeeInput] = useState('');
-
-  // const emailDebounce = useDebounce(attendeeInput);
   const { data: me, isLoading: ildu } = useGetMe();
 
   const { data: roomsResponse, isLoading: ildr } = useGetRooms(start!, end!);
-  // const { data: usersResponse, isLoading } = useGetUsersByEmail(emailDebounce, start!, end!);
   const attendees = watch('attendees') ?? [];
 
-  // const handleAddAttendee = (user: User) => {
-  //   if (attendees.find((u) => u.userID === user.userID)) return;
-
-  //   setValue('attendees', [...attendees, user]);
-  //   setAttendeeInput('');
-  // };
-  // const handleRemoveAttendee = (userID: string) => {
-  //   setValue(
-  //     'attendees',
-  //     attendees.filter((u) => u.userID !== userID),
-  //   );
-  // };
   const onSubmit = (data: BookingFormType) => {
-    if (attendeeInput.trim()) {
-      toast.error('Please select an attendee before submit');
-      return;
-    }
     onSave(data);
-    setAttendeeInput('');
   };
 
   React.useEffect(() => {
@@ -132,7 +106,6 @@ export function BookingModal({
           queryKey: ['bookings'],
         });
         onOpenChange();
-        setAttendeeInput('');
       },
     });
   };
@@ -181,72 +154,6 @@ export function BookingModal({
                       <Label htmlFor="title">Attendees</Label>
                     </div>
 
-                    {/* <div className="space-y-2">
-                      <div className="relative">
-                        <Input
-                          placeholder="Add attendee email"
-                          value={attendeeInput}
-                          onFocus={() => setFocusSearch(true)}
-                          onChange={(e) => setAttendeeInput(e.target.value)}
-                        />
-                        {emailDebounce && usersResponse && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-elevated z-999">
-                            {usersResponse && usersResponse.data.length > 0 ? (
-                              usersResponse.data.map((user) => (
-                                <button
-                                  type="button"
-                                  key={user.userID}
-                                  onClick={() => handleAddAttendee(user)}
-                                  className="w-full px-3 bg-gray-50 flex items-center justify-between  py-2 text-left hover:bg-muted transition-colors first:rounded-t-lg last:rounded-b-lg"
-                                >
-                                  <div className="">
-                                    <p className="text-sm font-medium text-black">
-                                      {user.fullName}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                                  </div>
-                                  <div>
-                                    {user.isAvailable ? (
-                                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
-                                        Available
-                                      </span>
-                                    ) : (
-                                      <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">
-                                        Busy
-                                      </span>
-                                    )}
-                                  </div>
-                                </button>
-                              ))
-                            ) : (
-                              <div className="w-full px-3 bg-gray-50 flex items-center justify-center  py-4 text-left text-sm hover:bg-muted transition-colors first:rounded-t-lg last:rounded-b-lg opacity-70">
-                                Not found any user match
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {attendeesFilter.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {attendeesFilter.filter(Boolean).map((user) => (
-                            <Badge
-                              key={user.userID}
-                              variant="secondary"
-                              className="flex items-center gap-1 pr-1"
-                            >
-                              {user.email}
-                              <button
-                                onClick={() => handleRemoveAttendee(user.userID)}
-                                className="ml-1 hover:bg-muted rounded p-0.5"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div> */}
                     <SearchSelectMulti
                       users={attendeesFilter}
                       start={start}
