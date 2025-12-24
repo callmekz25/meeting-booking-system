@@ -10,6 +10,11 @@ Meeting Equipment Management is a web application designed to help organizations
 - Check for room availability and prevent scheduling conflicts.
 - Send notifications to attendees and organizers via email upon booking creation or updates.
 
+### Meeting Room Management
+- Create, update meeting rooms.
+- Assign available equipment to each room.
+- Track room capacity and equipment availability.
+  
 ### Equipment Inventory Management
 - Track equipment quantity and status in meeting rooms.
 - Update equipment inventory via file upload for bulk operations.
